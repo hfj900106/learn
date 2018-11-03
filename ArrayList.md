@@ -1,5 +1,5 @@
 # ArrayList
-## ArrayList扩容
+## 扩容
 ###### 初次扩容容量置为10，以后每次扩容容量增大一半
 ###### 自动扩容公式：capacity=capacity+(capacity>>1)
 ```java
@@ -63,3 +63,4 @@ public class TestCommon {
 当前i=19；当前elementData的length=22
 7
 ```
+## 线程不安全
