@@ -8,7 +8,7 @@
 5 // 底层数据结构是链表，查询慢，增删快，线程不安全，效率高
 6 List linkedList = new LinkedList();
 ```
-##### Set接口：不可重复的集合，常用实现类HashSet、LinkedHashSet、TreeSet
+##### Set接口：元素不能保证有序且不可重复的集合，常用实现类HashSet、LinkedHashSet、TreeSet
 ```java
 1 // 元素无序，不可重复，线程不安全，集合元素可以为 NULL
 2 Set hashSet = new HashSet();
