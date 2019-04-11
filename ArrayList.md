@@ -64,3 +64,60 @@ public class TestCommon {
 7
 ```
 ## 线程不安全
+## 序列化
+今天同事问到ArrayList中的
+```java
+private transient E[] elementData; 
+```
+声明为transient，为什么还可以序列化成功呢？
+我的回答是ArrayList重写了writeObject
+```java
+private void writeObject(java.io.ObjectOutputStream s)  
+        throws java.io.IOException{  
+    int expectedModCount = modCount;  
+    // Write out element count, and any hidden stuff  
+    s.defaultWriteObject();  
+  
+        // Write out array length  
+        s.writeInt(elementData.length);  
+  
+    // Write out all elements in the proper order.  
+    for (int i=0; i<size; i++)  
+            s.writeObject(elementData[i]);  
+  
+    if (modCount != expectedModCount) {  
+        throw new ConcurrentModificationException();  
+    }  
+  } 
+```
+在使用ObjectOutputStream序列化对象时会调用这个writeObject方法。
+第二个问题是为什么要声明为transient呢？
+既然是数组，要序列化到文件中，那就单独测试下数组对象的序列化和反序列化吧
+```java
+String[] stra = new String[4];  
+stra[0] = "mmmmmmmmmm";  
+stra[2] = "nnnnnnnnnn";  
+  
+oos = new ObjectOutputStream(new FileOutputStream("D:\\sa.tmp"));  
+oos.writeObject(stra);  
+  
+ois = new ObjectInputStream(new FileInputStream("D:\\sa.tmp"));  
+  
+String[] str  = (String[])ois.readObject();  
+for(String s: str)  
+{  
+    System.out.println(s);  
+}  
+```
+ 输出结果为：
+ ```java
+ mmmmmmmmmm  
+null  
+nnnnnnnnnn  
+null  
+ ```
+从输出结果来看，数组序列化时，不管是否有值，都会将整个数组序列化到文件中。
+
+由此可以看出，比较靠谱的原因是：
+
+ArrayList是会开辟多余空间来保存数据的，而系列化和反序列化这些没有存放数据的空间是要消耗更多资源的，所以ArrayList的数组就声明为transient，告诉虚拟机这个你别管，我自己来处理，然后就自己实现write/readObject方法，仅仅系列化已经存放的数据。
