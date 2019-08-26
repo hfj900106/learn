@@ -24,4 +24,6 @@ InnoDB引擎就会先把记录写到 redo log 里面，并更新内存（db buff
 1. 明确加了limit 的限制时，遍历满足条件的语句循环就结束了，不会往下查找，减少了锁的范围。
 2. 增序 从小往大扫，降序 从大往小扫，注意间隙锁；
 
-
+### MySQL 中 update 修改数据与原数据相同会再次执行吗？
+1. 在binlog_format=row和binlog_row_image=FULL时，由于MySQL 需要在 binlog 里面记录所有的字段，所以在读数据的时候就会把所有数据都读出来，那么重复数据的update不会执行。即MySQL 调用了 InnoDB 引擎提供的“修改为 (1,55)”这个接口，但是引擎发现值与原来相同，不更新，直接返回。
+2. 在binlog_format = statement 和 binlog_row_image = FULL 时，InnoDB 内部认真执行了 update 语句，即“把这个值修改成 (1,999)“这个操作，该加锁的加锁，该更新的更新。
