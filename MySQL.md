@@ -31,4 +31,29 @@ InnoDB引擎就会先把记录写到 redo log 里面，并更新内存（db buff
 ### 讲MySQL是怎么保证数据不丢的
 1. 只要redo log和binlog保证持久化到磁盘，就能确保MySQL异常重启后，数据可以恢复。（未完成）
 
-### 
+### 表中有一列不定长，但是比较长的，且无规律的列，应该如何建索引高效查询
+1. 考虑列是无规律，所以不能建前缀索引；位数较长，所以全量索引也不合适，浪费空间；
+2. 表中加入一列用于存储CRC32（列）的值，用int(10)就够了，对这列加普通索引；
+3. 举例：
+```
+如果需要存储大量的url，并需要根据url进行搜索查找。如果使用B-Tree来存储URL，存储的内容就会很大，因为URL本身都很长。正常情况下会有如下查询：
+ 
+mysql> select id from url where url='http://www.mysql.com';
+ 
+若删除原来url列上的索引，而新增一个被索引的url_crc列，使用crc32做哈希。就可以实现一个伪哈希索引；查询就变成下面的方式：
+ 
+mysql> select id from url where url='http://www.mysql.com' and url_crc=crc32("http://www.mysql.com");
+ 
+
+这样性能会提高很多。
+当然这样实现的缺陷是需要维护哈希值，就是url改变对应哈希值也应该改变。可以手动维护，当然最好是使用触发器实现。
+
+如果采用这种方式，不要使用SHA1()和MD5()作为哈希函数，应该这个函数计算出来的哈希值是非常长的字符串，会浪费大量空间，比较时也会更慢。
+ 
+而如果数据表非常大，crc32()会出现大量的哈希冲突，而解决哈希冲突，可以在查询中增加url本身，进行进一步排除；
+ 
+如下面查询就可以解决哈希冲突的问题：
+mysql> select id from url where url='http://www.mysql.com' and url_crc=crc32("http://www.mysql.com");
+
+```
+
