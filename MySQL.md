@@ -27,3 +27,8 @@ InnoDB引擎就会先把记录写到 redo log 里面，并更新内存（db buff
 ### MySQL 中 update 修改数据与原数据相同会再次执行吗？
 1. 在binlog_format=row和binlog_row_image=FULL时，由于MySQL 需要在 binlog 里面记录所有的字段，所以在读数据的时候就会把所有数据都读出来，那么重复数据的update不会执行。即MySQL 调用了 InnoDB 引擎提供的“修改为 (1,55)”这个接口，但是引擎发现值与原来相同，不更新，直接返回。
 2. 在binlog_format = statement 和 binlog_row_image = FULL 时，InnoDB 内部认真执行了 update 语句，即“把这个值修改成 (1,999)“这个操作，该加锁的加锁，该更新的更新。
+
+### 讲MySQL是怎么保证数据不丢的
+1. 只要redo log和binlog保证持久化到磁盘，就能确保MySQL异常重启后，数据可以恢复。（未完成）
+
+### 
