@@ -25,11 +25,15 @@ jinfo -flag 属性名 pid（进程ID） 查看某个属性值
 
 jinfo -flags  pid（进程ID）  查看所有属性值  
 
-###### 查看JVM初始化参数
+###### 查看java JVM初始化参数
 java -XX:+PrintFlagsInitail
 打印的值前面是 :=值  说是是人为修改之后的
-###### 查看JVM被修改之后的参数
+###### 查看 java JVM被修改之后的参数
 java -XX:+PrintFlagsFinal 
+
+###### 查看Java JVM参数配置信息命令
+
+java -XX:+PrintCommandLineFlags（打印的配置最后一个是默认的垃圾回收机制）
 
 ### 类加载器
 
