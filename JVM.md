@@ -2,7 +2,8 @@
 
 ### JVM参数类型
 1.标配参数（-version 等）
-2.X参数（了解，非重点）
+2.X参数（了解，非重点,-Xmixed 混合模式，JVM自己来决定是否编译成本地代码）
+
 3.XX参数（重点）
   3.1 Boolean类型（用于开启或关闭某个属性）
   公式：-XX：+/-（具体属性） 
@@ -12,12 +13,23 @@
   3.2 KV类型(用于设置值)
   公式：-XX:key=value
   eg：-XX:MateSpaceSize=1024m (元空间大小赋值)
+###### 两个经典参数 -Xms和-Xmx如何解释
+-Xms等价于 -XX:InitailHeapSize
+-Xmx等价于 -XX:MaxHeapSize
 
 ###### 查看Java中正在运行的进程
 jps -l
-###### 查看java某个进程信息
-jinfo -flag 属性名 pid
-  
+###### 查看java进程信息
+
+jinfo -flag 属性名 pid（进程ID） 查看某个属性值
+
+jinfo -flags  pid（进程ID）  查看所有属性值  
+
+###### 查看JVM初始化参数
+java -XX:+PrintFlagsInitail
+打印的值前面是 :=值  说是是人为修改之后的
+###### 查看JVM被修改之后的参数
+java -XX:+PrintFlagsFinal 
 
 ### 类加载器
 
