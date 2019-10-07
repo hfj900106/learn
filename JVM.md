@@ -72,6 +72,35 @@ key表为null时，则原来对象被回收；
 ###### 虚引用（幽灵引用）
 任何时候都有可能会被回收，必须要和ReferenceQueue联合使用（前面的引用也用，单是不是只能，回收之前都会放到引用队列，做完最后的事情后就销毁对象），get()方法永远返回null，作用：跟踪某对象呗垃圾回收的状态，确保这个对象在回收的时候会收到一个系统通知或者后续添加进一步操作
 
+### OOM（out of memory）（错误，不是异常）
+###### java.lang.StackOverflowError
+jvm规定了栈的最大深度，当执行时栈的深度大于了规定的深度，就会抛出StackOverflowError错误；
+一般是递归调用出问题；栈默认512k-1024k;
+
+###### java.lang.OutOfMemoryError:java head space
+对象占空间太多，撑爆了堆内存
+eg:大对象，或者代码错误导致产生大量的对象；
+
+###### java.lang.OutOfMemoryError:GC overhead limit exceeded
+垃圾回收时间过长，超过98%的时间去回收垃圾，CPU使用率高，可是连续GC都达不到2%的回收内存效果；
+eg：list加了超多元素；一个生产事故就是这个，一个没有加条件的SQL查询，结果加入list返回，可是这个表的数据有几百万，全都放到list里面，直接崩溃了；
+
+###### java.lang.OutOfMemoryError:Direct buffer memory
+直接内存（堆外内存）溢出；常见于NIO，因为会用到ByteBuffer，两种缓冲区对应的API如下：
+
+JVM堆内存：ByteBuffer.allocate(size)  需要在native堆和java堆间来回拷贝，费性能
+本地内存：ByteBuffer.allocateDirect(size) 不会GC，直接拷贝内存，速度快
+弊端，没有GC去回收，那么可能导致本地内存被用完
+
+###### java.lang.OutOfMemoryError:unable to create new native thread
+多线程高并发的时候容易报，和平台有关有关，thread.start();start()调用的是native start0();Linux默认单进程最多可以创建1024个线程（理论个数，通常8、9百就开始报错了）；
+解决办法：先确认是否单进程中需要这么多线程，若不是，修改代码将数据降到最低；若是，则修改Linux配置，扩大限制的数量；
+eg:main方法for循环中创建线程
+###### java.lang.OutOfMemoryError:Matespace
+MateSpace在直接内存中，存放：加载的类的信息、常量池、静态变量、编译后的代码，空间被撑爆 就会报错；
+
+
+
 
 ### 类加载器
 
