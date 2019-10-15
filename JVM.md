@@ -109,7 +109,14 @@ MateSpace在直接内存中，存放：加载的类的信息、常量池、静�
 ### 安全沙箱
 
 ### GC 
-
+（A）、Minor GC
+       又称新生代GC，指发生在新生代的垃圾收集动作；
+       因为Java对象大多是朝生夕灭，所以Minor GC非常频繁，一般回收速度也比较快；
+（B）、Full GC
+       又称Major GC或老年代GC，指发生在老年代的GC；
+       出现Full GC经常会伴随至少一次的Minor GC（不是绝对，Parallel Sacvenge收集器就可以选择设置Major GC策略）；
+ Major GC速度一般比Minor GC慢10倍以上；
+ 
 ### 垃圾回收算法
 常用4中
 1.引用计数
@@ -128,3 +135,65 @@ MateSpace在直接内存中，存放：加载的类的信息、常量池、静�
 
 判断方法：枚举根节点可达性分析
 从GC Roots对象开始往下查找，在同一条链路上的称为可达，不在的不可达，将会被垃圾回收
+
+
+### 垃圾回收器
+目前7种
+可搭配使用：Serial/Serial Old、Serial/CMS、ParNew/Serial Old、ParNew/CMS、Parallel Scavenge/Serial Old、Parallel Scavenge/Parallel Old、G1；其中Serial Old作为CMS出现"Concurrent Mode Failure"失败的后备预案
+
+###### 新生代：Serial、ParNew、Parallel Scavenge
+
+###### 老年代：Serial Old、Parallel Old、CMS（Concurrent Mark and Sweep）
+
+###### 老少通吃：G1
+
+###### Serial（串行收集器）
+新生代，复制算法，单线程，GC停顿，Client模式下默认的新生代收集器（现在一般不用Client模式）
+命令：-XX:+UseSerialGC   
+
+###### ParNew(并行收集器)
+是Serial收集器的多线程版本，GC停顿比串行短
+应用场景
+      在Server模式下，ParNew收集器是一个非常重要的收集器，因为除Serial外，目前只有它能与CMS收集器配合工作；
+      但在单个CPU环境中，不会比Serail收集器有更好的效果，因为存在线程交互开销。
+设置参数
+      "-XX:+UseConcMarkSweepGC"：指定使用CMS后，会默认使用ParNew作为新生代收集器；
+      "-XX:+UseParNewGC"：强制指定使用ParNew；    
+      "-XX:ParallelGCThreads"：指定垃圾收集的线程数量，ParNew默认开启的收集线程与CPU的数量相同；
+      
+###### Parallel Scavenge       
+与吞吐量关系密切，也称为吞吐量收集器（Throughput Collector），jdk1.8默认的收集器，系统的吞吐量=用户代码运行时间/(用户代码运行时间+垃圾收集时间)，用于度量系统的运行效率。
+新生代，复制，多线程，目标
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
