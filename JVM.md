@@ -166,6 +166,11 @@ MateSpace在直接内存中，存放：加载的类的信息、常量池、静�
 新生代，复制算法，单线程，GC停顿时间长（毕竟单线程），Client模式下默认的新生代收集器（现在一般不用Client模式）  
 命令：-XX:+UseSerialGC   默认在young区用Serial GC ，old区用Serial old GC
 
+#### Serial Old 收集器
+Serial的老年代版本，标记-整理，不会产生内存碎片
+
+
+
 #### ParNew （新生代并行收集器）
 是Serial收集器的多线程版本，复制算法；GC停顿比串行短
 应用场景
@@ -175,49 +180,95 @@ MateSpace在直接内存中，存放：加载的类的信息、常量池、静�
       "-XX:+UseConcMarkSweepGC"：指定old区使用CMS，会默认使用ParNew作为新生代收集器；
       "-XX:+UseParNewGC"：指定young区使用ParNew，old区serial old（不再被推荐）；    
       "-XX:ParallelGCThreads"：指定垃圾收集的线程数量，ParNew默认开启的收集线程与CPU的数量相同；
+ 
+ 
+ 
       
 #### Parallel Scavenge  （并行收集器，多CPU同时执行）      
-与吞吐量关系密切，也称为吞吐量收集器（Throughput Collector），jdk1.8默认的收集器。  
+目标为最大吞吐量，也称为吞吐量收集器（Throughput Collector），jdk1.8默认的收集器。  
 系统的吞吐量=用户代码运行时间/(用户代码运行时间+垃圾收集时间)，用于度量系统的运行效率。    
 新生代，复制算法，多线程，目标提高吞吐量。  
 
 设置参数：可以相互激活
--XX:+UseParallelGC:新生代老年代（parallel old ）都用并行；
--XX:+UseParallelOldGC: 新生代老年代（parallel old ）都用并行；
+-XX:+UseParallelGC/-XX:+UseParallelOldGC :新生代（ParallelGC），老年代（parallel old ），都用并行；
 
 jdk1.6之前用ParallelGC + serial old（现在不用了）
 
-#### Serial Old 收集器
-Serial的老年代版本，标记-整理，不会产生内存碎片
-
 #### Parallel Old 收集器
+-XX:+UseParallelOldGC  新生代（ParallelGC），老年代（parallel old ），都用并行；
 Parallel Scavenge 并行收集器的老年代版本，标记-整理，不会产生内存碎片
 Parallel Scavenge + Parallel Old组合
+
+
 
 #### CMS (Concurrent Mark-Sweep)并发标记-清除
 以牺牲吞吐量为代价来获得最短回收停顿时间的垃圾回收器。适用于要求服务响应速度较快的应用上。
 标记—清除 算法。
 命令：-XX:+UseConcMarkSweepGC
 过程：
-初始标记(STW initial mark)
-并发标记(Concurrent marking)
-并发预清理(Concurrent precleaning)
-重新标记(STW remark)
-并发清理(Concurrent sweeping)
-并发重置(Concurrent reset)
+1.初始标记；2.并发标记；3.重新标记；4.并发清除
+1、3步会STW（停顿整个应用）
 
 优点：  
 1.并发收集(concurrent)  
 2.低停顿  
  缺点：  
-1. 内存碎片
+1.内存碎片
 标记-清除算法会产生大量空间碎片. 大量的碎片会导致老年代空间剩余很大却无法被充分利用. 难以找到连续的空间分配大对象, 导致触发Full GC.
 针对这种情况, CMS提供了参数-XX:+UseCMSCompactAtFullCollection, 用于Full GC之后提供碎片整理, 内存整理的过程无法并发. 空间碎片问题解决了, 但停顿时间由于Full GC而边长了. 虚拟机还提供了另一个参数-XX:CMSFullGCsBeforeCompaction用于设置在执行多少次不压缩的Full GC后, 跟着来一次带碎片整理的Full GC.
  
+ 具体：
+ 初始标记 Initial Mark
+ CMS收集开始，这个初始标记是一个STW的过程，扫描GC roots（静态变量、线程栈）能够直接达到的对象。
+ 
+ 并发标记 Concurrent Mark
+ 并发过程，应用线程重新启动，然后GC从上一步标记出的活对象开始进行Tracing。
+ 
+ 预清理阶段 Preclean
+ 并发过程，在上一步的并发标记过程中，应用线程也一直在运行，因此可能有对象引用状态的修改。CMS需要找到所有这些修改来修正标记。预清理过程寻找并记录下这些改变。例如，一个线程A开始有一个引用指向对象X, 但是之后又指向了对象Y， CMS需要现在Y是活的，而X不再是了。
+ 
+ 重新标记 remark phase
+ STW过程，如果应用一直修改对象引用状态，CMS不能准确地确定哪个对象是活的。所以CMS需要停止应用线程来追上之前的这些修改。
+ 
+ 并发清除 sweep phase
+ 并发过程，CMS将之前标记处的死掉的对象的空间放到它的空闲链表中。
+ 
+ 重置 reset phase
+ 并发过程，CMS清理它的状态，准备下一次收集。
+ 
+CMS不进行压缩,不移动对象，使用空闲链表记录空闲内存。所以存在内存碎片，可以设置参数来控制多少次后进行一次压缩，另外由于并发收集，可能导致应用程序产生垃圾的速度比收集的要快，这时造成Concurrent Mode Failure会降级到Serial Old进行STW的回收，引发比较久的应用停顿，可以设置CMS开始触发的老年代使用内存比例。
+ 
+ 
 ###### 重点 G1 （Garbage Frist）
-相比CMS收集器, G1收集器有两个改进点
+G1(Garbage-First）是一款面向服务器的垃圾收集器，支持新生代和老年代空间的垃圾收集，主要针对配备多核处理器及大容量内存的机器，G1最主要的设计目标是: 实现可预期及可配置的STW停顿时间
+JDK1.9已经成为默认的收集器，相比CMS收集器, G1收集器有两个改进点
 1.G1基于标记-整理算法, 不会产生空间碎片
 2.G1可以精确控制停顿
+命令：
+-XX:+UseG1GC（jdk 1.8+ 可以用）
+常见调优：
+-XX:MaxGCPauseMillis=200 （最大停顿时间200ms默认）；
+-XX:InitiatingHeapOccupancyPercent=45 （开始第一个标记周期的堆占比，默认45%）；
+-XX:G1HeapRegionSize=n （设置每个Region的大小，这里需要是1MB到32MB的2的指数的大小）；
+-XX:ConcGCThreads （垃圾收集线程个数，和CPU数量有关，CPU小于8的最多可以配置8；超过8的，可配置n * 5/8）；
+-XX:G1ReservePercent  （预留内存，默认值是10，代表使用10%的堆内存为预留内存，当Survivor区域没有足够空间容纳新晋升对象时会尝试使用预留内存）；
+
+
+
+原理：大小相等的region（1-32M，2的指数），逻辑上连续，小块标记清理
+
+Region：  
+为实现大内存空间的低停顿时间的回收，将划分为多个大小相等的Region。每个小堆区都可能是 Eden区，Survivor区或者Old区，但是在同一时刻只能属于某个代
+       在逻辑上, 所有的Eden区和Survivor区合起来就是新生代，所有的Old区合起来就是老年代，且新生代和老年代各自的内存Region区域由G1自动控制，不断变动
+堆空间region：  
+Eden、Survivor、old、Humongous regions（多个连续的region组成，存放巨型对象(Humongous Object)）；
+
+巨型对象：  
+当对象大小超过Region的一半，则认为是巨型对象(Humongous Object)，直接被分配到老年代的巨型对象区(Humongous regions)，这些巨型区域是一个连续的区域集，每一个Region中最多有一个巨型对象，巨型对象可以占多个Region
+
+划分region的意义：  
+1.避免全堆扫描  
+2.GC时间可控
 
 
 
