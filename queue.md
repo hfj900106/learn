@@ -1,5 +1,22 @@
 ### 队列
-非阻塞队列：ConcurrentLinkedQueue(无界线程安全)，采用CAS机制（compareAndSwapObject原子操作）；  实现并发安全无非两种方式，一种是锁，就像我们之前分析的容器，比如 concurrentHashMap，CopyOnWriteArrayList ， LinkedBolckingQueue，还有一种是 CAS，在这些容器里也用到了。
 
+#### 阻塞队列（BlockingQueue）
+1. ArrayBlockingQueue
+2. LinkedBlockingQueue
+3. SynchronousQueue
 
-阻塞队列：ArrayBlockingQueue(有界)、LinkedBlockingQueue（无界）、DelayQueue、PriorityBlockingQueue，采用锁机制；使用 ReentrantLock 锁。
+##### BlockingQueue 核心方法
+
+add(e)  无法立即执行，抛一个异常
+offer(e)  无法立即执行，返回一个特定的值(常常是 true / false)
+put(e)  无法立即执行，该方法调用将会发生阻塞，直到能够执行
+offer(e, time, unit)  无法立即执行，该方法调用将会发生阻塞，直到能够执行，但等待时间不会超过给定值。返回一个特定值以告知该操作是否成功(典型的是 true / false)
+
+remove()  无法立即执行，抛一个异常
+poll()  无法立即执行，返回一个特定的值(常常是 true / false)
+take()  无法立即执行，该方法调用将会发生阻塞，直到能够执行
+poll(time, unit)  无法立即执行，该方法调用将会发生阻塞，直到能够执行，但等待时间不会超过给定值。返回一个特定值以告知该操作是否成功(典型的是 true / false)
+
+#### 非阻塞队列：
+1. ConcurrentLinkedQueue
+
