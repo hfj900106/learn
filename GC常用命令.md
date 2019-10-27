@@ -69,6 +69,8 @@ Full GC前后打印跟踪类视图
 ### -XX:MaxDirectMemorySize=40M
 最大堆外内存大小
 
+### -XX:PretenureSizeThreshold  
+大于这个值的参数直接在老年代分配
 
 # CMS/G1通用阈值设置
 ### -XX:MaxTenuringThreshold=15

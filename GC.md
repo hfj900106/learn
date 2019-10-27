@@ -1,7 +1,8 @@
 ## GC 
 （A）、Minor GC
        又称新生代GC，指发生在新生代的垃圾收集动作；
-       因为Java对象大多是朝生夕灭，所以Minor GC非常频繁，一般回收速度也比较快；
+       因为Java对象大多是朝生夕灭，所以Minor GC非常频繁，一般回收速度也比较快；  
+       特殊：老年代可能存在对新生代对象的引用，为了避免Minor GC对老年代的全扫描，java虚拟机引入了“卡表”技术，大概记录了老年代中可能存在引用新生代的内存区域；
 
 （B）、Full GC
        又称Major GC或老年代GC，指发生在老年代的GC；
@@ -11,20 +12,25 @@
 ### 垃圾回收算法
 
 1.引用计数  
-  只要对象的引用计数器的值为0，则立刻回收。每次对对象赋值需要维护计数器，而且计数器本身有一定损耗，比较难处理循环引用的问题，一般不用；
+  只要对象的引用计数器的值为0，则立刻回收。每次对对象赋值需要维护计数器，而且计数器本身有一定损耗，比较难处理循环引用的问题，一般不用；  
 2.复制  
-  内存分区（开始是对半分，后来优化8:1:1），其中一个区被占用完之后将本区中仍然存活的对象复制到另一个区，如此循环；
+  内存分区（开始是对半分，后来优化8:1:1），其中一个区被占用完之后将本区中仍然存活的对象复制到另一个区，如此循环；  
   新生代很多对象都是朝生夕死，所以没必要留50%给存活区，HotSpot默认的Eden和Survivor比例是8:1:1，就是说，每次能使用90%的内存容量。当然，也可能会出现剩余10%的Survivor空间不够复制原有存活对象的情况，那就需要依赖其它内存（这里指老年代）进行分配担保（Handle Promotion)。通过分配担保机制，这些对象会直接进入老年代。  
 3.标记-清除（Mark-Sweep）   
-  3.1 标记阶段：找到所有可访问的对象，做个标记 
-  3.2 清除阶段：遍历堆，把未被标记的对象回收   
-  
-  为了能够区分对象是live的,可以为每个对象添加一个marked字段，该字段在对象创建的时候，默认值是false，被标记后未true，被清理之后修改为false。
-  优点：可以解决循环引用的问题，内存不足时才回收。
+  3.1 标记阶段：找到所有可访问的对象，做个标记  
+  3.2 清除阶段：遍历堆，把未被标记的对象回收    
+  为了能够区分对象是live的,可以为每个对象添加一个marked字段，该字段在对象创建的时候，默认值是false，被标记后未true，被清理之后修改为false。  
+  优点：可以解决循环引用的问题，内存不足时才回收。  
   缺点：回收是STW（应用线程挂起）；效率低，尤其是对象很多的时候；造成内存碎片（由于内存空间不连续，这样给大对象分配内存的时候可能会提前触发full gc）；
   
-4.标记-整理（Mark-Compact） 
+4.标记-压缩（Mark-Compact） 
 这种算法和标记-清除算法很像，唯一不同的是，当标记完成后，不是清理掉需要回收的对象，而是将所有存活的对象向一端移动，然后将边界以外的内存全部清理掉，这样可以有效避免空间碎片的产生。
+缺点：压缩算法的消耗；
+### 空间分配担保
+在发生Minor GC之前，虚拟机会先检查老年代最大可用的连续空间是否大于新生代所有对象总空间。如果这个条件成立，那么Minor GC可以确保是安全的。如果不成立，则虚拟机会查看HandlerPromotionFailure设置是否允许担保失败。如果允许，那么会继续检查老年代最大可用的连续空间是否大于历次晋升到老年代对象的平均大小。如果大于，将尝试着进行一次Monitor GC，尽管这次GC是有风险的。如果小于，或者HandlerPromotionFailure设置不允许冒险，那这时也要改为进行一次Full GC了。
+上述所说的冒险到底是冒的什么险呢？
+前面提到过，新生代使用复制收集算法，但是为了内存利用率。只使用其中一个Survivor空间来作为轮换备份，因此当出现大量对象在Minor GC后仍然存活的情况（最极端的情况是内存回收之后，新生代中所有的对象都存活），就需要老年代进行分配担保，把Survivor无法容纳的对象直接进入老年代。老年代要进行这样的担保，前提是老年代本身还有容纳这些对象的剩余空间，一共有多少对象存活下来在实际完成内存回收之前是无法明确知道的，所以只好取之前每一次回收晋升到老年代对象容量的平均大小值作为经验值，与老年代的剩余空间进行比较，决定是否进行Full GC来让老年代腾出更多空间。
+取平均值进行比较其实仍然是一种动态概率的手段，也就是说，如果某次Minor GC存活后的对象突增，远远高于平均值的话，依然会导致担保失败。如果出现HandlerPromotionFailure失败，那就只好在失败后重新发起一次FULL GC。虽然担保失败时绕的圈子是最大的，但大部分情况下都还是将HandlerPromotionFailure开关打开，避免Full GC过于频繁。
 
 ### 垃圾回收的时候如何确定对象是垃圾，什么是GC Roots，哪些对象可以作为GC Roots？
 可作为GC Roots的对象有：
@@ -41,42 +47,38 @@
 目前7种
 可搭配使用：Serial/Serial Old、Serial/CMS、ParNew/Serial Old、ParNew/CMS、Parallel Scavenge/Serial Old、Parallel Scavenge/Parallel Old、G1；其中Serial Old作为CMS出现"Concurrent Mode Failure"失败的后备预案
 
-###### 新生代：Serial、ParNew、Parallel Scavenge
-
-###### 老年代：Serial Old、Parallel Old、CMS（Concurrent Mark and Sweep）
-
-###### 老少通吃：G1
+#### 新生代：Serial、ParNew、Parallel Scavenge
+全部是复制算法
+#### 老年代：Serial Old、Parallel Old、CMS（Concurrent Mark and Sweep）
+Serial Old、Parallel Old 用 标记-压缩 算法；CMS用 标记-清除 算法；
+#### 老少通吃：G1
 
 #### Serial（串行收集器）
 新生代，复制算法，单线程，GC停顿时间长（毕竟单线程），Client模式下默认的新生代收集器（现在一般不用Client模式）  
 命令：-XX:+UseSerialGC   默认在young区用Serial GC ，old区用Serial old GC
 
 #### Serial Old 收集器
-Serial的老年代版本，标记-整理，不会产生内存碎片
+Serial的老年代版本，标记-压缩，不会产生内存碎片
 
 
 
-#### ParNew （新生代并行收集器）
-是Serial收集器的多线程版本，复制算法；GC停顿比串行短
-应用场景
-      在Server模式下，ParNew收集器是一个非常重要的收集器，因为除Serial外，目前只有它能与CMS收集器配合工作；
-      但在单个CPU环境中，不会比Serail收集器有更好的效果，因为存在线程交互开销。
-设置参数
-      "-XX:+UseConcMarkSweepGC"：指定old区使用CMS，会默认使用ParNew作为新生代收集器；
-      "-XX:+UseParNewGC"：指定young区使用ParNew，old区serial old（不再被推荐）；    
-      "-XX:ParallelGCThreads"：指定垃圾收集的线程数量，ParNew默认开启的收集线程与CPU的数量相同；
+#### ParNew （新生代并行收集器） 
+是Serial收集器的多线程版本，复制算法；GC停顿比串行短；ParNew默认开启的收集线程与CPU的数量相同；    
+应用场景   
+      在Server模式下，ParNew收集器是一个非常重要的收集器，因为除Serial外，目前只有它能与CMS收集器配合工作；  
+      但在单个CPU环境中，不会比Serail收集器有更好的效果，因为存在线程交互开销。  
+设置参数   
+      "-XX:+UseConcMarkSweepGC"：指定old区使用CMS，会默认使用ParNew作为新生代收集器；  
+      "-XX:+UseParNewGC"：指定young区使用ParNew，old区serial old（不再被推荐）；      
  
- 
- 
-      
 #### Parallel Scavenge  （并行收集器，多CPU同时执行）      
 目标为最大吞吐量，也称为吞吐量收集器（Throughput Collector），jdk1.8默认的收集器。  
 系统的吞吐量=用户代码运行时间/(用户代码运行时间+垃圾收集时间)，用于度量系统的运行效率。    
 新生代，复制算法，多线程，目标提高吞吐量。  
 
-设置参数：可以相互激活
--XX:+UseParallelGC/-XX:+UseParallelOldGC :新生代（ParallelGC），老年代（parallel old ），都用并行；
-
+设置参数：可以相互激活  
+-XX:+UseParallelGC/-XX:+UseParallelOldGC：新生代（ParallelGC），老年代（parallel old ），都用并行；
+-XX:ParallelGCThreads：指定垃圾收集的线程数量；  
 jdk1.6之前用ParallelGC + serial old（现在不用了）
 
 #### Parallel Old 收集器
@@ -84,15 +86,13 @@ jdk1.6之前用ParallelGC + serial old（现在不用了）
 Parallel Scavenge 并行收集器的老年代版本，标记-整理，不会产生内存碎片
 Parallel Scavenge + Parallel Old组合
 
-
-
 #### CMS (Concurrent Mark-Sweep)并发标记-清除
 以牺牲吞吐量为代价来获得最短回收停顿时间的垃圾回收器。适用于要求服务响应速度较快的应用上。
 标记—清除 算法。
 命令：-XX:+UseConcMarkSweepGC
 过程：
 1.初始标记；2.并发标记；3.重新标记；4.并发清除
-1、3步会STW（停顿整个应用）
+第1、3步会STW（停顿整个应用）
 
 优点：  
 1.并发收集(concurrent)  
@@ -126,19 +126,17 @@ CMS不进行压缩,不移动对象，使用空闲链表记录空闲内存。所�
  
 ###### 重点 G1 （Garbage Frist）
 G1(Garbage-First）是一款面向服务器的垃圾收集器，支持新生代和老年代空间的垃圾收集，主要针对配备多核处理器及大容量内存的机器，G1最主要的设计目标是: 实现可预期及可配置的STW停顿时间
-JDK1.9已经成为默认的收集器，相比CMS收集器, G1收集器有两个改进点
-1.G1基于标记-整理算法, 不会产生空间碎片
-2.G1可以精确控制停顿
-命令：
--XX:+UseG1GC（The G1 garbage collector is fully supported in Oracle JDK 7 update 4 and later releases）
-常见调优：
--XX:MaxGCPauseMillis=200 （最大停顿时间200ms默认）；
--XX:InitiatingHeapOccupancyPercent=45 （开始第一个标记周期的堆占比，默认45%）；
--XX:G1HeapRegionSize=n （设置每个Region的大小，这里需要是1MB到32MB的2的指数的大小）；
--XX:ConcGCThreads （垃圾收集线程个数，和CPU数量有关，CPU小于8的最多可以配置8；超过8的，可配置n * 5/8）；
--XX:G1ReservePercent  （预留内存，默认值是10，代表使用10%的堆内存为预留内存，当Survivor区域没有足够空间容纳新晋升对象时会尝试使用预留内存）；
-
-
+JDK1.9已经成为默认的收集器，相比CMS收集器, G1收集器有两个改进点  
+1.G1基于标记-整理算法, 不会产生空间碎片  
+2.G1可以设置应用停顿时间  
+命令：  
+-XX:+UseG1GC（The G1 garbage collector is fully supported in Oracle JDK 7 update 4 and later releases）  
+常见调优：  
+-XX:MaxGCPauseMillis=200 （最大停顿时间200ms默认）；  
+-XX:InitiatingHeapOccupancyPercent=45 （开始第一个标记周期的堆占比，默认45%）；  
+-XX:G1HeapRegionSize=n （设置每个Region的大小，这里需要是1MB到32MB的2的指数的大小）；  
+-XX:ConcGCThreads （垃圾收集线程个数，和CPU数量有关，CPU小于8的最多可以配置8；超过8的，可配置n * 5/8）；  
+-XX:G1ReservePercent  （预留内存，默认值是10，代表使用10%的堆内存为预留内存，当Survivor区域没有足够空间容纳新晋升对象时会尝试使用预留内存）；  
 
 原理：大小相等的region（1-32M，2的指数），逻辑上连续，小块标记清理
 
