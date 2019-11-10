@@ -5,16 +5,13 @@
 
 WAL （Write-Ahead Logging） ，关键点是：先写日志在写磁盘
 
-当有一条记录需要更新的时候：
-
-InnoDB引擎就会先把记录写到 redo log 里面，并更新内存（db buffer），这个时候更新就算完成了。
-
-此时，内存（db buffer）中的数据和磁盘数据（data file）对应的数据不同，我们认为内存中的数据是脏数据（即：脏页）；
-
+当有一条记录需要更新的时候：  
+InnoDB引擎就会先把记录写到 redo log 里面，并更新内存（db buffer），这个时候更新就算完成了。  
+此时，内存（db buffer）中的数据和磁盘数据（data file）对应的数据不同，我们认为内存中的数据是脏数据（即：脏页）；  
 同时，InnoDB引擎会在适当的时候，将这个操作记录更新到磁盘里面（data file），而这个更新往往是在系统比较空闲的时候做。
 
 ### MySQL 中 update 修改数据与原数据相同会再次执行吗？
-1. 在binlog_format=row和binlog_row_image=FULL时，由于MySQL 需要在 binlog 里面记录所有的字段，所以在读数据的时候就会把所有数据都读出来，那么重复数据的update不会执行。即MySQL 调用了 InnoDB 引擎提供的“修改为 (1,55)”这个接口，但是引擎发现值与原来相同，不更新，直接返回。
+1. 在binlog_format = row 和 binlog_row_image = FULL 时，由于MySQL 需要在 binlog 里面记录所有的字段，所以在读数据的时候就会把所有数据都读出来，那么重复数据的update不会执行。即MySQL 调用了 InnoDB 引擎提供的“修改为 (1,55)”这个接口，但是引擎发现值与原来相同，不更新，直接返回。
 2. 在binlog_format = statement 和 binlog_row_image = FULL 时，InnoDB 内部认真执行了 update 语句，即“把这个值修改成 (1,999)“这个操作，该加锁的加锁，该更新的更新。
 
 ### 讲MySQL是怎么保证数据不丢的
