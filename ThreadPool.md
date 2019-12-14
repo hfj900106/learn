@@ -12,13 +12,13 @@
 ##### ThreadPoolExecutor 参数
 
 ThreadPoolExecutor(
-                    int corePoolSize, 
-                    int maximumPoolSize,
-                    long keepAliveTime,
-                    TimeUnit unit,
-                    BlockingQueue<Runnable> workQueue,
-                    ThreadFactory threadFactory,
-                    RejectedExecutionHandler handler
+                    int corePoolSize,       // the number of threads to keep in the pool, even if they are idle, unless {@code allowCoreThreadTimeOut} is set
+                    int maximumPoolSize,    // the maximum number of threads to allow in the pool
+                    long keepAliveTime,     // when the number of threads is greater than  the core,this is the maximum time that excess idle threads will wait for new tasks before terminating.
+                    TimeUnit unit,          // 单位
+                    BlockingQueue<Runnable> workQueue, // the queue to use for holding tasks before they are executed.
+                    ThreadFactory threadFactory,       // the factory to use when the executor creates a new thread
+                    RejectedExecutionHandler handler   // the handler to use when execution is blocked because the thread bounds and queue capacities are reached
                     )                        
 
 ##### 自建线程池怎么合理配置线程数
