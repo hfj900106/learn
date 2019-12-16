@@ -1,4 +1,4 @@
-##### Map接口：key-value的键值对，key不允许重复，value可以，key-value通过映射关系关联，常用实现类HashMap、TreeMap、HashTable
+#### Map接口：key-value的键值对，key不允许重复，value可以，key-value通过映射关系关联，常用实现类HashMap、TreeMap、HashTable
 1.HashMap
 
 2.TreeMap
@@ -17,3 +17,8 @@
 2 Map<String, String> hashMap = new HashMap<String, String>();
 3 // 采用红黑树算法，key有序且不允许重复，key判断重复的标准是：compareTo或compare返回值是否为0
 4 Map<String, String> treeMap = new TreeMap<String, String>();
+
+
+####  HashMap 什么情况下链表转红黑树
+1. 链表转红黑树阈值是8，但是实际链表长度=9；
+2. 数组容量>64；如果数组容量<64,优先扩容；
