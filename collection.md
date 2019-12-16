@@ -13,6 +13,10 @@
 3.LinkedList
 底层数据结构是双向链表，线程不安全，内存可以不连续，不会造成内存碎片，插入块，查询慢
 
+4.CopyOnWriteArrayList
+写时复制，线程安全
+
+
 ### Set
 元素不能保证有序且不可重复的集合，常用实现类 HashSet、LinkedHashSet、TreeSet
 
