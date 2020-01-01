@@ -44,64 +44,43 @@
 
 
 ### 垃圾收集器
-目前7种
-可搭配使用：Serial/Serial Old、Serial/CMS、ParNew/Serial Old、ParNew/CMS、Parallel Scavenge/Serial Old、Parallel Scavenge/Parallel Old、G1；其中Serial Old作为CMS出现"Concurrent Mode Failure"失败的后备预案
 
 #### 新生代：Serial、ParNew、Parallel Scavenge
 全部是复制算法
+
 #### 老年代：Serial Old、Parallel Old、CMS（Concurrent Mark and Sweep）
 Serial Old、Parallel Old 用 标记-压缩 算法；CMS用 标记-清除 算法；
-#### 老少通吃：G1
 
-#### Serial（串行收集器）
-新生代，复制算法，单线程，GC停顿时间长（毕竟单线程），Client模式下默认的新生代收集器（现在一般不用Client模式）  
-命令：-XX:+UseSerialGC   默认在young区用Serial GC ，old区用Serial old GC
+#### 全能：G1
 
-#### Serial Old 收集器
-Serial的老年代版本，标记-压缩，不会产生内存碎片
+标记-清除 会产生内存碎片，其他的都不会；
+其中Serial Old作为CMS出现"Concurrent Mode Failure"失败的后备预案
 
 
-
-#### ParNew （新生代并行收集器） 
-是Serial收集器的多线程版本，复制算法；GC停顿比串行短；ParNew默认开启的收集线程与CPU的数量相同；    
-应用场景   
-      在Server模式下，ParNew收集器是一个非常重要的收集器，因为除Serial外，目前只有它能与CMS收集器配合工作；  
-      但在单个CPU环境中，不会比Serail收集器有更好的效果，因为存在线程交互开销。  
-设置参数   
-      "-XX:+UseConcMarkSweepGC"：指定old区使用CMS，会默认使用ParNew作为新生代收集器；  
-      "-XX:+UseParNewGC"：指定young区使用ParNew，old区serial old（不再被推荐）；      
+#### ParNew  搭配  CMS
+停顿时间短
+"-XX:+UseConcMarkSweepGC"：指定old区使用CMS，会默认使用ParNew作为新生代收集器；  
  
-#### Parallel Scavenge  （并行收集器，多CPU同时执行）      
-目标为最大吞吐量，也称为吞吐量收集器（Throughput Collector），jdk1.8默认的收集器。  
-系统的吞吐量=用户代码运行时间/(用户代码运行时间+垃圾收集时间)，用于度量系统的运行效率。    
-新生代，复制算法，多线程，目标提高吞吐量。  
+#### Parallel Scavenge  搭配 Parallel Old
+目标 最大吞吐量
+jdk1.8 默认的收集器。
+  
+系统的吞吐量 = 用户代码运行时间 / (用户代码运行时间 + 垃圾收集时间)。    
 
 设置参数：可以相互激活  
--XX:+UseParallelGC/-XX:+UseParallelOldGC：新生代（ParallelGC），老年代（parallel old ），都用并行；
+-XX:+UseParallelGC / -XX:+UseParallelOldGC：新生代（ParallelGC），老年代（parallel old ），都用并行；
 -XX:ParallelGCThreads：指定垃圾收集的线程数量；  
-jdk1.6之前用ParallelGC + serial old（现在不用了）
 
-#### Parallel Old 收集器
--XX:+UseParallelOldGC  新生代（ParallelGC），老年代（parallel old ），都用并行；
-Parallel Scavenge 并行收集器的老年代版本，标记-整理，不会产生内存碎片
-Parallel Scavenge + Parallel Old组合
+#### CMS 搭配 ParNew
+目标 最短回收停顿时间，适用于要求服务响应速度较快的应用上。
 
-#### CMS (Concurrent Mark-Sweep)并发标记-清除
-以牺牲吞吐量为代价来获得最短回收停顿时间的垃圾回收器。适用于要求服务响应速度较快的应用上。
-标记—清除 算法。
-命令：-XX:+UseConcMarkSweepGC
+-XX:+UseCMSCompactAtFullCollection  开启后 Full GC之后进行碎片整理；
+-XX:CMSFullGCsBeforeCompaction  设置在执行多少次不压缩的Full GC后, 进行一次带碎片整理的Full GC；
+
 过程：
 1.初始标记；2.并发标记；3.重新标记；4.并发清除
 第1、3步会STW（停顿整个应用）
 
-优点：  
-1.并发收集(concurrent)  
-2.低停顿  
- 缺点：  
-1.内存碎片
-标记-清除算法会产生大量空间碎片. 大量的碎片会导致老年代空间剩余很大却无法被充分利用. 难以找到连续的空间分配大对象, 导致触发Full GC.
-针对这种情况, CMS提供了参数-XX:+UseCMSCompactAtFullCollection, 用于Full GC之后提供碎片整理, 内存整理的过程无法并发. 空间碎片问题解决了, 但停顿时间由于Full GC而边长了. 虚拟机还提供了另一个参数-XX:CMSFullGCsBeforeCompaction用于设置在执行多少次不压缩的Full GC后, 跟着来一次带碎片整理的Full GC.
- 
  具体：
  初始标记 Initial Mark
  CMS收集开始，这个初始标记是一个STW的过程，扫描GC roots（静态变量、线程栈）能够直接达到的对象。
