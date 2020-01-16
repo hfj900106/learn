@@ -24,7 +24,7 @@ FairSync -> lock() -> acquire(1)
 3. acquireQueued(final Node node, int arg)--AQS实现--针对新加入队列的node不断尝试后续操作：如果preNode是head（队列里排第一），则尝试获取锁，如果preNode不是head，或者获取锁失败，则将当前线程挂起；
 4. selfInterrupt()--AQS实现--中断当前线程
 
-##### tryAcquire() 都做什么？
+##### 独占锁的 tryAcquire() 都做什么？
 1. 判断当前锁有没有被占用；
 2. 如果锁没有被占用, 尝试以公平的方式获取锁；
 3. 如果锁已经被占用, 检查是不是锁重入，是的话，持有锁线程数+1，不是重入，则获取锁失败；
@@ -50,6 +50,32 @@ FairSync -> lock() -> acquire(1)
 2. 检查head和waitStatus，如果队列中还有等待线程，则唤醒(unparkSuccessor(Node h))，否则释放成功；
 
 
-### 共享锁
-#### ReentrantReadWriteLock 共享锁获取
+### 共享锁 ReentrantReadWriteLock
+#### 写锁（WriteLock）获取
+WriteLock -> lock() -> sync.acquire(1)
 
+注：同步状态的 低16位 表示 写锁 的获取次数，高16位 表示 读锁 被获取的次数
+
+##### acquire() 中做什么事？这是一个模板方法设计模式，规定的acquire()要做的事情：
+1. tryAcquire(arg)--子类 实现 获取锁的具体逻辑，要不实现直接用的话抛异常；
+2. addWaiter(Node mode)--AQS实现，和独占锁调用的是同一个；
+3. acquireQueued(final Node node, int arg)--AQS实现，和独占锁调用的是同一个；
+4. selfInterrupt()--AQS实现，和独占锁调用的是同一个；
+
+##### WriteLock的 tryAcquire() 都做什么？
+主要逻辑为：判断读锁是否已经被读线程获取 或者 写锁已经被其他写线程获取，是则写锁获取失败；否则，获取成功，写状态+1，设置写锁持有线程为当前线程。
+
+#### 写锁（WriteLock）释放
+重写AQS的tryRelease方法：
+1. 当前同步状态-1（因为写状态是低16位，可以直接减）；
+2. 减一之后的写状态是否为0，为0则释放写锁；
+3. 不为0则更新同步状态；
+
+#### 读锁（ReadLock）获取
+1. 如果写锁已经被获取并且获取写锁的线程不是当前线程的话，当前线程获取读锁失败返回-1；
+
+#### 读锁（ReadLock）释放
+注意修改状态的时候是高16位的，需要进行位移-1然后再位移更新回去
+
+#### 锁降级
+读写锁支持锁降级，遵循按照获取写锁，获取读锁再释放写锁的次序，写锁能够降级成为读锁，不支持锁升级
