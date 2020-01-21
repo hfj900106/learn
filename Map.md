@@ -7,6 +7,8 @@
 
 4.ConcurrentHashMap
 
+5.LinkedHashMap
+
 1、HashMap是非线程安全的，HashTable是线程安全的。
 2、HashMap的键和值都允许有null值存在，而HashTable都不行。
 3、因为线程安全的问题，HashMap效率比HashTable的要高。
@@ -21,7 +23,7 @@
 
 ####  HashMap 什么情况下链表转红黑树
 1. 链表转红黑树阈值是8，但是实际链表长度=9；
-2. 数组容量>64；如果数组容量<64,优先扩容；
+2. 数组容量>=64；如果数组容量<64,优先扩容；
 
 #### ConcurrentHashMap
 
@@ -50,3 +52,7 @@ sizeCtl：表初始化和大小调整控制。如果为负，则表示Node[]正�
 ##### size
  ConcurrentHashMap 来说，这个 table 里到底装了多少东西其实是个不确定的数量，是个估计值。 
  
+#### LinkedHashMap
+维护双向链表，支持插入顺序和访问顺序；
+accessOrder默认是false， if (accessOrder){ afterNodeAccess(e);}
+afterNodeAccess()处理节点移动

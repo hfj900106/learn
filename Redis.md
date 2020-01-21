@@ -155,3 +155,9 @@ redisDb结构的expires字典保存了数据库中所有键的过期时间，我
 ##### 京东金融redis实践
 【https://www.infoq.cn/article/jingdong-redis-practice/】
 
+##### redis 命令
+
+GETSET 将给定 key 的值设为 value ，并返回 key 的旧值(old value)。
+SETNX  只有在 key 不存在时设置 key 的值。
+ 
+
