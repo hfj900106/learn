@@ -32,7 +32,7 @@ CPU性能远超主内存，两者间若是直接交互，那么CPU的速度必�
 ### 内存模型交互
 lock  unlock  read  load  use  assign  store  write 
 
-javap -c -s -v -l xxx.class 查看字节码
+注：javap -c -s -v -l xxx.class 查看反汇编字节码
 
 ### volatile
 1.内存可见性；

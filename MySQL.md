@@ -185,6 +185,9 @@ sharding-jdbc 这种 client 层方案的优点在于不用部署，运维成本�
 路由：ID取模寻址
 
 
+### MySQL数据结构
+
+
 ### MyCat 原理
 
 ### MongoDB
